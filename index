@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rocket Crash Game</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #0d1117; /* Темно-синий фон */
+            color: #e6edf3; /* Светлый текст */
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        .header {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 15px 0;
+            background-color: #161b22; /* Темнее для хедера */
+            border-bottom: 1px solid #30363d;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .stars-balance {
+            display: flex;
+            align-items: center;
+            background-color: #21262d;
+            border-radius: 20px;
+            padding: 8px 15px;
+            font-size: 1.1em;
+            font-weight: bold;
+            color: #f0b90b; /* Цвет звезд */
+        }
+
+        .stars-balance img {
+            width: 20px;
+            height: 20px;
+            margin-right: 8px;
+        }
+
+        .add-stars-btn {
+            background-color: #388bfd; /* Синяя кнопка */
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            font-size: 1.5em;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-left: 10px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .add-stars-btn:hover {
+            background-color: #2671e2;
+        }
+
+        .game-area {
+            position: relative;
+            width: 100%;
+            max-width: 500px; /* Ограничение ширины */
+            height: 300px;
+            background-color: #1e252e; /* Более светлый фон для игровой области */
+            margin-top: 20px;
+            border-radius: 15px;
+            overflow: hidden; /* Чтобы ракета не выходила за границы */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .rocket-animation {
+            position: absolute;
+            width: 150px; /* Размер ракеты */
+            height: 150px;
+            background: url('https://via.placeholder.com/150/0000FF/FFFFFF?text=TON+Rocket') no-repeat center center; /* Замени на свою картинку ракеты */
+            background-size: contain;
+            transition: transform 0.5s ease-out, opacity 0.3s ease-out; /* Анимация */
+        }
+
+        #multiplier-display {
+            position: absolute;
+            font-size: 3.5em;
+            font-weight: bold;
+            color: #38bdf8; /* Цвет множителя */
+            text-shadow: 0 0 15px rgba(56, 189, 248, 0.7);
+            z-index: 1;
+        }
+
+        .betting-section {
+            width: 100%;
+            max-width: 500px;
+            padding: 20px;
+            margin-top: 20px;
+            background-color: #161b22;
+            border-radius: 15px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .recent-multipliers {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .recent-multipliers div {
+            background-color: #21262d;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: bold;
+            color: #79c0ff; /* Цвет прошлых множителей */
+        }
+
+        .player-list {
+            margin-top: 20px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .player-item {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            border-bottom: 1px solid #30363d;
+        }
+
+        .player-item:last-child {
+            border-bottom: none;
+        }
+
+        .player-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: #388bfd; /* Заглушка для аватара */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.2em;
+            font-weight: bold;
+            margin-right: 15px;
+            flex-shrink: 0;
+        }
+
+        .player-info {
+            flex-grow: 1;
+            text-align: left;
+        }
+
+        .player-name {
+            font-weight: bold;
+            color: #e6edf3;
+        }
+
+        .player-bet {
+            font-size: 0.9em;
+            color: #79c0ff;
+            display: flex;
+            align-items: center;
+        }
+
+        .player-bet img {
+            width: 16px;
+            height: 16px;
+            margin-right: 5px;
+        }
+
+        .player-status {
+            font-weight: bold;
+            margin-left: auto;
+            color: #28a745; /* Зеленый для выигрыша */
+        }
+
+        .player-status.lost {
+            color: #dc3545; /* Красный для проигрыша */
+        }
+
+        .place-bet-button {
+            width: 100%;
+            background-color: #388bfd;
+            color: white;
+            padding: 15px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.2em;
+            font-weight: bold;
+            margin-top: 20px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .place-bet-button:hover {
+            background-color: #2671e2;
+        }
+
+        /* Анимация полета ракеты */
+        @keyframes rocketFly {
+            0% { transform: translate(0, 0) scale(1); opacity: 1; }
+            100% { transform: translate(50%, -100%) scale(1.2); opacity: 0.7; } /* Пример полета */
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="stars-balance">
+            <img src="https://via.placeholder.com/20/f0b90b/000000?text=⭐" alt="Star">
+            <span id="player-stars">0</span>
+            <button class="add-stars-btn" onclick="addStars()">+</button>
+        </div>
+    </div>
+
+    <div class="game-area">
+        <div id="multiplier-display">x1.00</div>
+        <div id="rocket" class="rocket-animation"></div>
+    </div>
+
+    <div class="betting-section">
+        <div class="recent-multipliers">
+            <div>x1.19</div>
+            <div>x3.90</div>
+            <div>x1.05</div>
+            <div>x1.01</div>
+            <div>x2.78</div>
+        </div>
+
+        <div class="player-list">
+            <div class="player-item">
+                <div class="player-avatar">N</div>
+                <div class="player-info">
+                    <div class="player-name">neqrik18</div>
+                    <div class="player-bet">
+                        <img src="https://via.placeholder.com/16/f0b90b/000000?text=⭐" alt="Star">
+                        666 x1.11
+                    </div>
+                </div>
+                <div class="player-status">✔️</div>
+            </div>
+            <div class="player-item">
+                <div class="player-avatar">A</div>
+                <div class="player-info">
+                    <div class="player-name">Aquver</div>
+                    <div class="player-bet">
+                        <img src="https://via.placeholder.com/16/f0b90b/000000?text=⭐" alt="Star">
+                        273 x1.26
+                    </div>
+                </div>
+                <div class="player-status lost">❌</div>
+            </div>
+            <div class="player-item">
+                <div class="player-avatar">K</div>
+                <div class="player-info">
+                    <div class="player-name">kospiskiy937</div>
+                    <div class="player-bet">
+                        <img src="https://via.placeholder.com/16/f0b90b/000000?text=⭐" alt="Star">
+                        178 x1.19
+                    </div>
+                </div>
+                <div class="player-status"></div>
+            </div>
+            <div class="player-item">
+                <div class="player-avatar">A</div>
+                <div class="player-info">
+                    <div class="player-name">deth_in_7he_n</div>
+                    <div class="player-bet">
+                        <img src="https://via.placeholder.com/16/f0b90b/000000?text=⭐" alt="Star">
+                        189 x1.26
+                    </div>
+                </div>
+                <div class="player-status lost">❌</div>
+            </div>
+        </div>
+
+        <button class="place-bet-button" onclick="placeBet()">Сделать ставку</button>
+    </div>
+
+    <script>
+        let tg = window.Telegram.WebApp;
+        tg.expand();
+
+        let currentMultiplier = 1.00;
+        let isCrashed = false;
+        let crashPoint = parseFloat((Math.random() * 5 + 1.1).toFixed(2)); // Рандомная точка краша
+
+        const multiplierDisplay = document.getElementById('multiplier-display');
+        const rocketElement = document.getElementById('rocket');
+        const playerStarsElement = document.getElementById('player-stars');
+        
+        let playerStars = 50; // Начальные звезды
+        playerStarsElement.innerText = playerStars;
+
+        let animationFrameId;
+
+        function animateRocket(timestamp) {
+            if (!animationFrameId) animationFrameId = timestamp;
+            const progress = (timestamp - animationFrameId) / 1000; // Прогресс в секундах
+
+            if (currentMultiplier < crashPoint && !isCrashed) {
+                currentMultiplier += 0.01 + progress * 0.005; // Увеличиваем множитель и ускоряем
+                multiplierDisplay.innerText = `x${currentMultiplier.toFixed(2)}`;
+
+                // Пример анимации ракеты: поднимается и немного смещается
+                const rocketY = -progress * 50; // Подъем
+                const rocketX = progress * 10; // Смещение
+                const scale = 1 + progress * 0.1; // Увеличение
+                rocketElement.style.transform = `translate(${rocketX}px, ${rocketY}px) scale(${scale})`;
+
+                requestAnimationFrame(animateRocket);
+            } else {
+                isCrashed = true;
+                multiplierDisplay.innerText = "BOOM!";
+                multiplierDisplay.style.color = "red";
+                rocketElement.style.transform = `translateY(100px) scale(0.5) rotate(45deg)`; // Эффект падения/разрушения
+                rocketElement.style.opacity = '0.3'; // Прозрачность при краше
+                cancelAnimationFrame(animationFrameId);
+                animationFrameId = null; // Сброс для следующего раунда
+            }
+        }
+
+        function startGame() {
+            currentMultiplier = 1.00;
+            isCrashed = false;
+            crashPoint = parseFloat((Math.random() * 5 + 1.1).toFixed(2)); // Новый crashPoint
+            multiplierDisplay.innerText = "x1.00";
+            multiplierDisplay.style.color = "#38bdf8";
+            rocketElement.style.transform = `translate(0, 0) scale(1)`;
+            rocketElement.style.opacity = '1';
+
+            animationFrameId = requestAnimationFrame(animateRocket);
+        }
+
+        function addStars() {
+            // Отправляем запрос боту на покупку звезд
+            tg.sendData(JSON.stringify({ action: "buy_stars" }));
+        }
+
+        function placeBet() {
+            if (!isCrashed) {
+                // В реальной игре здесь будет логика ставки и возможность забрать
+                // Сейчас это просто кнопка-заглушка
+                alert("Ваша ставка принята!");
+                // Отправляем боту, что игрок сделал ставку
+                tg.sendData(JSON.stringify({ action: "place_bet", amount: 10 })); // Пример: ставка 10 звезд
+            } else {
+                alert("Игра уже закончилась, дождитесь нового раунда!");
+                startGame(); // Начать новый раунд после краша
+            }
+        }
+
+        // Запуск первой игры
+        startGame();
+    </script>
+</body>
+</html>
