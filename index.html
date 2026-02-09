@@ -3,150 +3,256 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <title>Rocket Crash - Stars Edition</title>
     <style>
-        body { font-family: 'Arial', sans-serif; background: #0d1117; color: white; margin: 0; display: flex; flex-direction: column; align-items: center; height: 100vh; overflow: hidden; }
+        :root { --bg: #0b0e11; --surface: #1e2329; --primary: #02d1a4; --danger: #f6465d; --accent: #f0b90b; --text: #eaecef; }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; outline: none; }
         
-        /* Баланс */
-        .header { width: 100%; padding: 15px; display: flex; justify-content: center; background: #161b22; }
-        .balance { background: #21262d; padding: 10px 20px; border-radius: 20px; color: #f0b90b; font-weight: bold; display: flex; align-items: center; gap: 8px; }
-
-        /* Игровое поле */
-        .game-view { position: relative; width: 100%; height: 40vh; background: radial-gradient(circle at bottom, #1e293b 0%, #0d1117 80%); display: flex; justify-content: center; align-items: center; overflow: hidden; }
-        #multiplier { font-size: 4rem; font-weight: bold; color: #38bdf8; text-shadow: 0 0 20px rgba(56, 189, 248, 0.5); z-index: 10; }
-        
-        /* Ракета */
-        #rocket { 
-            position: absolute; width: 120px; height: 120px; 
-            background: url('https://raw.githubusercontent.com/syetolog2011-sudo/rocket/main/skeleton.png') no-repeat center; 
-            background-size: contain; bottom: 20%; left: 10%; transition: transform 0.1s linear; 
-            filter: drop-shadow(0 0 10px #38bdf8); display: none;
+        body { 
+            margin: 0; background: var(--bg); color: var(--text); 
+            font-family: -apple-system, system-ui, sans-serif; 
+            display: flex; flex-direction: column; height: 100vh; overflow: hidden; 
         }
 
-        /* Список игроков */
-        .players-box { width: 90%; background: #161b22; border-radius: 15px; margin-top: 20px; padding: 10px; flex-grow: 1; overflow-y: auto; }
-        .player-row { display: flex; justify-content: space-between; padding: 8px; border-bottom: 1px solid #30363d; font-size: 14px; }
+        input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+        input[type=number] { -moz-appearance: textfield; }
 
-        /* Кнопка */
-        .main-button { width: 90%; padding: 18px; border-radius: 15px; border: none; font-size: 1.2rem; font-weight: bold; cursor: pointer; margin-bottom: 20px; transition: 0.2s; }
-        .bet-mode { background: #388bfd; color: white; }
-        .cashout-mode { background: #f0b90b; color: black; }
-        .disabled { background: #484f58; color: #8b949e; cursor: not-allowed; }
+        .history-bar { 
+            height: 40px; background: #181a20; display: flex; align-items: center; gap: 8px; 
+            padding: 0 10px; overflow-x: auto; flex-shrink: 0; border-bottom: 1px solid #2b3139;
+            scrollbar-width: none; -ms-overflow-style: none;
+        }
+        .history-bar::-webkit-scrollbar { display: none; }
+        .hist-chip { padding: 3px 10px; border-radius: 4px; font-size: 11px; font-weight: bold; background: #2b3139; flex-shrink: 0; }
+
+        .balance-float { 
+            position: absolute; top: 12px; right: 12px; font-weight: bold; color: var(--accent); 
+            z-index: 10; background: rgba(0,0,0,0.8); padding: 5px 15px; border-radius: 20px; 
+            border: 1px solid #333; font-size: 14px; 
+        }
+        
+        .game-view { flex-grow: 1; position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        #multi { font-size: 85px; font-weight: 900; z-index: 2; margin: 0; text-shadow: 0 0 25px rgba(0,0,0,0.9); }
+        canvas { position: absolute; width: 100%; height: 100%; top: 0; left: 0; z-index: 1; opacity: 0.5; }
+
+        .controls { background: var(--surface); padding: 15px; border-top: 1px solid #2b3139; display: flex; flex-direction: column; gap: 12px; z-index: 5; }
+        .inputs-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; width: 100%; }
+        .input-wrapper { display: flex; flex-direction: column; gap: 6px; }
+        .label-row { display: flex; align-items: center; gap: 6px; font-size: 11px; color: #848e9c; font-weight: bold; text-transform: uppercase; height: 16px; }
+        .input-field { background: var(--bg); border: 1px solid #474d57; border-radius: 8px; display: flex; align-items: center; padding: 0 12px; height: 50px; }
+        .input-field input { background: none; border: none; color: white; font-size: 18px; width: 100%; font-weight: bold; }
+        input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--primary); margin: 0; }
+        .x2-btn { color: var(--primary); font-weight: bold; font-size: 14px; background: none; border: none; padding-left: 10px; cursor: pointer; }
+
+        .btn-main { width: 100%; height: 60px; border-radius: 10px; border: none; font-weight: 900; font-size: 22px; cursor: pointer; text-transform: uppercase; }
+        .state-bet { background: var(--primary); color: #000; box-shadow: 0 4px 0 #01a380; }
+        .state-cash { background: var(--accent); color: #000; box-shadow: 0 4px 0 #c79a08; }
+        .state-wait { background: #474d57; color: #848e9c; }
+
+        .players-section { height: 30%; background: #14171a; overflow-y: auto; border-top: 1px solid #2b3139; }
+        .player-row { display: grid; grid-template-columns: 1.2fr 0.8fr 1fr; padding: 12px 15px; font-size: 13px; border-bottom: 1px solid #1e2329; }
+        .win { color: var(--primary); font-weight: bold; }
+        .loss { color: var(--danger); font-weight: bold; }
     </style>
 </head>
 <body>
 
-<div class="header">
-    <div class="balance">⭐️ <span id="user-stars">50</span></div>
-</div>
+    <div class="balance-float">⭐ <span id="balance">100</span></div>
+    <div id="history" class="history-bar"></div>
+    
+    <div class="game-view">
+        <h1 id="multi">x1.00</h1>
+        <canvas id="chart"></canvas>
+    </div>
 
-<div class="game-view">
-    <div id="multiplier">x1.00</div>
-    <div id="rocket"></div>
-</div>
+    <div class="controls">
+        <div class="inputs-grid">
+            <div class="input-wrapper">
+                <div class="label-row">СУММА</div>
+                <div class="input-field">
+                    <input type="number" id="betAmount" value="10">
+                    <button class="x2-btn" onclick="document.getElementById('betAmount').value *= 2">X2</button>
+                </div>
+            </div>
+            <div class="input-wrapper">
+                <div class="label-row">
+                    <input type="checkbox" id="autoEnabled" checked>
+                    <span>АВТО-ВЫВОД</span>
+                </div>
+                <div class="input-field">
+                    <input type="number" id="autoCash" value="2.0" step="0.1">
+                </div>
+            </div>
+        </div>
+        <button id="mainBtn" class="btn-main state-bet" onclick="handleAction()">Ставка</button>
+    </div>
 
-<div class="players-box" id="player-list">
-    <div style="text-align: center; color: #8b949e; margin-top: 20px;">Ожидание ставок...</div>
-</div>
-
-<button id="action-btn" class="main-button bet-mode" onclick="handleBtn()">СДЕЛАТЬ СТАВКУ</button>
+    <div class="players-section" id="bet-list"></div>
 
 <script>
-    let tg = window.Telegram.WebApp;
-    tg.expand();
+    const canvas = document.getElementById('chart');
+    const ctx = canvas.getContext('2d');
+    const multiTxt = document.getElementById('multi');
+    const mainBtn = document.getElementById('mainBtn');
+    const balanceTxt = document.getElementById('balance');
+    const betList = document.getElementById('bet-list');
+    const autoCheck = document.getElementById('autoEnabled');
+    const historyBar = document.getElementById('history');
 
-    let balance = 50;
-    let currentMult = 1.00;
-    let gameState = "waiting"; // waiting, flying, crashed
-    let crashPoint = 0;
-    let timer;
+    canvas.width = window.innerWidth * 2;
+    canvas.height = window.innerHeight;
 
-    const btn = document.getElementById('action-btn');
-    const multDisplay = document.getElementById('multiplier');
-    const rocket = document.getElementById('rocket');
+    let balance = 100; // НОВЫЙ БАЛАНС
+    let isPlaying = false;
+    let hasCashed = false;
+    let gameStatus = 'wait'; 
+    let currentX = 1.00;
+    let lastX = 2.0; // Храним результат прошлого раунда
+    let bots = [];
+    const myBots = ["Kevnz", "Delloris", "danzler", "lordum", "exzmen", "introspect", "lanlk"];
 
-    function handleBtn() {
-        if (gameState === "waiting") {
-            placeBet();
-        } else if (gameState === "flying") {
+    function handleAction() {
+        if (gameStatus === 'wait' && !isPlaying) {
+            let b = parseFloat(document.getElementById('betAmount').value);
+            if (b > balance || b <= 0) return;
+            balance -= b;
+            isPlaying = true;
+            balanceTxt.innerText = Math.floor(balance);
+            mainBtn.innerText = "ПРИНЯТО";
+            mainBtn.className = "btn-main state-wait";
+        } else if (gameStatus === 'run' && isPlaying && !hasCashed) {
             cashOut();
         }
     }
 
-    function placeBet() {
-        if (balance < 10) return alert("Недостаточно звезд!");
-        balance -= 10;
-        document.getElementById('user-stars').innerText = balance;
-        
-        btn.innerText = "ОЖИДАНИЕ ВЗЛЕТА...";
-        btn.className = "main-button disabled";
-        gameState = "ready";
-        
-        // Через 3 секунды взлет
-        setTimeout(startFlight, 2000);
-    }
-
-    function startFlight() {
-        gameState = "flying";
-        btn.innerText = `ЗАБРАТЬ ${(10 * currentMult).toFixed(0)} ⭐️`;
-        btn.className = "main-button cashout-mode";
-        rocket.style.display = "block";
-        
-        crashPoint = (Math.random() * 3 + 1.1); // Рандом от 1.1 до 4.1
-        if (Math.random() < 0.05) crashPoint = 10 + Math.random() * 50; // 5% шанс на большой икс
-
-        timer = setInterval(() => {
-            currentMult += 0.01; // СКОРОСТЬ РОСТА (0.01 - плавно)
-            multDisplay.innerText = "x" + currentMult.toFixed(2);
-            
-            // Анимация ракеты (плавное движение)
-            let xProgress = (currentMult - 1) * 20;
-            let yProgress = Math.sin(currentMult * 2) * 10;
-            rocket.style.transform = `translate(${xProgress}px, ${yProgress}px)`;
-
-            if (gameState === "flying") {
-                btn.innerText = `ЗАБРАТЬ ${(10 * currentMult).toFixed(1)} ⭐️`;
-            }
-
-            if (currentMult >= crashPoint) {
-                crash();
-            }
-        }, 80); // Интервал обновления (80мс - комфортно для глаз)
-    }
-
     function cashOut() {
-        if (gameState !== "flying") return;
-        let win = (10 * currentMult).toFixed(1);
-        balance += parseFloat(win);
-        document.getElementById('user-stars').innerText = balance.toFixed(1);
-        
-        alert("Вы забрали " + win + " звезд!");
-        gameState = "cashed_out";
-        btn.innerText = "ОЖИДАНИЕ...";
-        btn.className = "main-button disabled";
+        if (hasCashed) return;
+        let bet = parseFloat(document.getElementById('betAmount').value);
+        let win = Math.floor(bet * currentX);
+        balance += win;
+        balanceTxt.innerText = Math.floor(balance);
+        hasCashed = true;
+        mainBtn.innerText = `УСПЕЛ! (${win})`;
+        mainBtn.className = "btn-main state-wait";
     }
 
-    function crash() {
-        clearInterval(timer);
-        gameState = "crashed";
-        multDisplay.style.color = "#ef4444";
-        multDisplay.innerText = "BOOM!";
-        rocket.style.display = "none";
-        
-        btn.innerText = "ВЗРЫВ!";
-        btn.className = "main-button disabled";
-
-        setTimeout(() => {
-            // Сброс игры для нового раунда
-            currentMult = 1.00;
-            multDisplay.style.color = "#38bdf8";
-            multDisplay.innerText = "x1.00";
-            btn.className = "main-button bet-mode";
-            btn.innerText = "СДЕЛАТЬ СТАВКУ";
-            gameState = "waiting";
-        }, 3000);
+    function createBots() {
+        betList.innerHTML = "";
+        bots = [];
+        myBots.forEach(name => {
+            if (Math.random() > 0.4) {
+                bots.push({
+                    name: name,
+                    bet: Math.floor(Math.random() * 50 + 5),
+                    outAt: (1.2 + Math.random() * 10).toFixed(2),
+                    done: false
+                });
+            }
+        });
+        bots.forEach((b, i) => {
+            betList.innerHTML += `<div class="player-row"><span>${b.name}</span><span>${b.bet}</span><span id="bot-r-${i}">...</span></div>`;
+        });
     }
+
+    async function gameLoop() {
+        while(true) {
+            gameStatus = 'wait';
+            createBots();
+            multiTxt.innerText = "x1.00"; 
+            multiTxt.style.color = "#fff";
+            
+            for(let i=5; i>0; i--) {
+                if (!isPlaying) { 
+                    mainBtn.innerText = `СТАВКА (${i}с)`; 
+                    mainBtn.className = "btn-main state-bet"; 
+                } else { 
+                    mainBtn.innerText = `ОЖИДАНИЕ ${i}с`; 
+                }
+                await new Promise(r => setTimeout(r, 1000));
+            }
+
+            gameStatus = 'run';
+            hasCashed = false;
+
+            // --- УМНАЯ ЛОГИКА СЛИВОВ И ВЫДАЧИ ---
+            let crashAt;
+            let r = Math.random();
+
+            if (lastX < 1.8) { 
+                // Если прошлый раз был слив — шанс на "ракету" выше (60% летим высоко)
+                if (r < 0.6) crashAt = 5 + Math.random() * 125;
+                else crashAt = 1.2 + Math.random() * 3;
+            } else if (lastX > 15) {
+                // Если прошлый раз была жирная выдача — 70% шанс на слив
+                if (r < 0.7) crashAt = 1.05 + Math.random() * 0.5;
+                else crashAt = 2 + Math.random() * 5;
+            } else {
+                // Обычный режим
+                if (r < 0.1) crashAt = 1.01 + Math.random() * 0.1;
+                else if (r < 0.4) crashAt = 3 + Math.random() * 40;
+                else crashAt = 1.2 + Math.random() * 2.5;
+            }
+
+            crashAt = Math.min(crashAt, 130).toFixed(2);
+            
+            if (isPlaying) { mainBtn.innerText = "ЗАБРАТЬ"; mainBtn.className = "btn-main state-cash"; }
+            
+            let start = Date.now();
+            await new Promise(resolve => {
+                let itv = setInterval(() => {
+                    let elapsed = (Date.now() - start) / 1000;
+                    currentX = Math.pow(1.18, elapsed * 1.6);
+
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    ctx.beginPath(); ctx.strokeStyle = "#02d1a4"; ctx.lineWidth = 12;
+                    ctx.moveTo(0, canvas.height * 0.85);
+                    let scaleX = currentX > 50 ? 60 : 115;
+                    for(let t=0; t<=elapsed; t+=0.1) {
+                        ctx.lineTo(t*scaleX, (canvas.height * 0.85) - (Math.pow(1.18, t * 1.6) * 30));
+                    }
+                    ctx.stroke();
+
+                    multiTxt.innerText = "x" + currentX.toFixed(2);
+                    if (currentX >= 100) multiTxt.style.color = "var(--accent)";
+
+                    if (isPlaying && !hasCashed && autoCheck.checked) {
+                        if (currentX >= parseFloat(document.getElementById('autoCash').value) && currentX < crashAt) cashOut();
+                    }
+
+                    bots.forEach((b, idx) => {
+                        if (!b.done && currentX >= b.outAt && b.outAt < crashAt) {
+                            b.done = true;
+                            document.getElementById(`bot-r-${idx}`).innerHTML = `<span class="win">${Math.floor(b.bet * b.outAt)}</span>`;
+                        }
+                    });
+
+                    if (currentX >= crashAt) {
+                        clearInterval(itv);
+                        doCrash(currentX);
+                        resolve();
+                    }
+                }, 50);
+            });
+            await new Promise(r => setTimeout(r, 4000));
+        }
+    }
+
+    function doCrash(x) {
+        gameStatus = 'crash';
+        lastX = parseFloat(x); // Запоминаем для следующего раунда
+        multiTxt.innerText = "КРАШ!"; multiTxt.style.color = "var(--danger)";
+        isPlaying = false;
+        bots.forEach((b, idx) => {
+            if (!b.done) document.getElementById(`bot-r-${idx}`).innerHTML = `<span class="loss">${Math.floor(b.bet * x)}</span>`;
+        });
+        let h = document.createElement('div');
+        h.className = 'hist-chip';
+        h.style.color = x >= 100 ? '#ff00ea' : (x >= 10 ? 'var(--accent)' : (x >= 2 ? 'var(--primary)' : 'var(--danger)'));
+        h.innerText = 'x' + lastX.toFixed(2);
+        historyBar.prepend(h);
+    }
+
+    gameLoop();
 </script>
-
 </body>
 </html>
