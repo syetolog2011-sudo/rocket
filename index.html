@@ -240,7 +240,7 @@
     function doCrash(x) {
         gameStatus = 'crash';
         lastX = parseFloat(x); // Запоминаем для следующего раунда
-        multiTxt.innerText = "КРАШ!"; multiTxt.style.color = "var(--danger)";
+        multiTxt.innerText = "CRASH!"; multiTxt.style.color = "var(--danger)";
         isPlaying = false;
         bots.forEach((b, idx) => {
             if (!b.done) document.getElementById(`bot-r-${idx}`).innerHTML = `<span class="loss">${Math.floor(b.bet * x)}</span>`;
